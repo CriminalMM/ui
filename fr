@@ -1,0 +1,2030 @@
+ --// Load Chat Spy!
+ print("Loading ChatSpy")
+ --This script reveals ALL hidden messages in the default chat
+
+ enabled = true --chat "/spy" to toggle!
+ spyOnMyself = true --if true will check your messages too
+ public = false --if true will chat the logs publicly (fun, risky)
+ publicItalics = true --if true will use /me to stand out
+ privateProperties = { --customize private logs
+     Color = Color3.fromRGB(0,255,255); 
+     Font = Enum.Font.SourceSansBold;
+     TextSize = 18;
+ }
+ 
+ 
+ local StarterGui = game:GetService("StarterGui")
+ local Players = game:GetService("Players")
+ local player = Players.LocalPlayer or Players:GetPropertyChangedSignal("LocalPlayer"):Wait() or Players.LocalPlayer
+ local saymsg = game:GetService("ReplicatedStorage"):WaitForChild("DefaultChatSystemChatEvents"):WaitForChild("SayMessageRequest")
+ local getmsg = game:GetService("ReplicatedStorage"):WaitForChild("DefaultChatSystemChatEvents"):WaitForChild("OnMessageDoneFiltering")
+ local instance = (_G.chatSpyInstance or 0) + 1
+ _G.chatSpyInstance = instance
+ 
+ local function onChatted(p,msg)
+     if _G.chatSpyInstance == instance then
+         if p==player and msg:lower():sub(1,4)=="/spy" then
+             enabled = not enabled
+             wait(0.3)
+             privateProperties.Text = "{ "..(enabled and "" or "").."}"
+             StarterGui:SetCore("ChatMakeSystemMessage",privateProperties)
+         elseif enabled and (spyOnMyself==true or p~=player) then
+             msg = msg:gsub("[\n\r]",''):gsub("\t",' '):gsub("[ ]+",' ')
+             local hidden = true
+             local conn = getmsg.OnClientEvent:Connect(function(packet,channel)
+                 if packet.SpeakerUserId==p.UserId and packet.Message==msg:sub(#msg-#packet.Message+1) and (channel=="All" or (channel=="Team" and public==false and Players[packet.FromSpeaker].Team==player.Team)) then
+                     hidden = false
+                 end
+             end)
+             wait(1)
+             conn:Disconnect()
+             if hidden and enabled then
+                 if public then
+                     saymsg:FireServer((publicItalics and "/me " or '').."{SPY} [".. p.Name .."]: "..msg,"All")
+                 else
+                     privateProperties.Text = " [".. p.Name .."]: "..msg
+                     StarterGui:SetCore("ChatMakeSystemMessage",privateProperties)
+                 end
+             end
+         end
+     end
+ end
+ 
+ for _,p in ipairs(Players:GetPlayers()) do
+     p.Chatted:Connect(function(msg) onChatted(p,msg) end)
+ end
+ Players.PlayerAdded:Connect(function(p)
+     p.Chatted:Connect(function(msg) onChatted(p,msg) end)
+ end)
+ privateProperties.Text = " "..(enabled and "" or "")..""
+ StarterGui:SetCore("ChatMakeSystemMessage",privateProperties)
+ if not player.PlayerGui:FindFirstChild("Chat") then wait(3) end
+ local chatFrame = player.PlayerGui.Chat.Frame
+ chatFrame.ChatChannelParentFrame.Visible = true
+ chatFrame.ChatBarParentFrame.Position = chatFrame.ChatChannelParentFrame.Position+UDim2.new(UDim.new(),chatFrame.ChatChannelParentFrame.Size.Y)
+ print("Loaded Chat Spy.")
+--// End Of Loading.
+
+local repo = 'https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/'
+
+local Library = loadstring(game:HttpGet(repo .. 'Library.lua'))()
+local ThemeManager = loadstring(game:HttpGet(repo .. 'addons/ThemeManager.lua'))()
+local SaveManager = loadstring(game:HttpGet(repo .. 'addons/SaveManager.lua'))()
+
+local Window = Library:CreateWindow({
+   -- Set Center to true if you want the menu to appear in the center
+   -- Set AutoShow to true if you want the menu to appear when it is created
+   -- Position and Size are also valid options here
+   -- but you do not need to define them unless you are changing them :)
+
+   Title = 'Fr0zenL4ke.ez | FiveR | reapersrevenge_',
+   Center = true,
+   AutoShow = true,
+   TabPadding = 8,
+   MenuFadeTime = 0.2
+})
+
+-- CALLBACK NOTE:
+-- Passing in callback functions via the initial element parameters (i.e. Callback = function(Value)...) works
+-- HOWEVER, using Toggles/Options.INDEX:OnChanged(function(Value) ... ) is the RECOMMENDED way to do this.
+-- I strongly recommend decoupling UI code from logic code. i.e. Create your UI elements FIRST, and THEN setup :OnChanged functions later.
+
+-- You do not have to set your tabs & groups up this way, just a prefrence.
+local Tabs = {
+   -- Creates a new tab titled Main
+   Main = Window:AddTab('Main'),
+   Online = Window:AddTab('Online'),
+   Weapons = Window:AddTab('Weapons'),
+   AimAndVis = Window:AddTab('Aim/Vis'),
+   Teleports = Window:AddTab('Teleports'),
+   ['UI Settings'] = Window:AddTab('UI Settings'),
+}
+
+-- Groupbox and Tabbox inherit the same functions
+-- except Tabboxes you have to call the functions on a tab (Tabbox:AddTab(name))
+local LeftGroupBox = Tabs.Main:AddLeftGroupbox('Local')
+
+-- We can also get our Main tab via the following code:
+-- local LeftGroupBox = Window.Tabs.Main:AddLeftGroupbox('Groupbox')
+
+-- Tabboxes are a tiny bit different, but here's a basic example:
+--[[
+
+local TabBox = Tabs.Main:AddLeftTabbox() -- Add Tabbox on left side
+
+local Tab1 = TabBox:AddTab('Tab 1')
+local Tab2 = TabBox:AddTab('Tab 2')
+
+-- You can now call AddToggle, etc on the tabs you added to the Tabbox
+]]
+
+
+
+-- 1/15/23
+-- Deprecated old way of creating buttons in favor of using a table
+-- Added DoubleClick button functionality
+
+--[[
+   Groupbox:AddButton
+   Arguments: {
+       Text = string,
+       Func = function,
+       DoubleClick = boolean
+       Tooltip = string,
+   }
+
+   You can call :AddButton on a button to add a SubButton!
+]]
+
+local MyButton = LeftGroupBox:AddButton({
+   Text = 'God Mode',
+   Func = function()
+       local Players = game:GetService("Players")
+       local ReplicatedStorage = game:GetService("ReplicatedStorage")
+       
+       local client = Players.LocalPlayer
+       local remote = ReplicatedStorage.WeaponFrameworkRep.Events.Damage
+       
+       local function killPlayer(player)
+           if player == client then
+               local character = player.Character
+               if character then
+                   local instance = character:GetChildren()[1]
+                   local args = {
+                       19742,
+                       {instance},
+                       {
+                           ["DamageHumanoid"] = {
+                               ["Value"] = -math.huge, -- change to negative infinity for infinite health
+                           },
+                           ["DamageVehicle"] = {
+                               ["Value"] = -math.huge,
+                           },
+                           ["Explosive"] = {
+                               ["ExplosiveDamageHumanoid"] = {
+                                   ["Value"] = -math.huge,
+                               },
+                               ["ExplosiveDamageVehicle"] = {
+                                   ["Value"] = -math.huge,
+                               },
+                           },
+                       },
+                       Vector3.new(0,0,0)
+                   }
+                   remote:FireServer(unpack(args))
+               end
+           end
+       end
+       
+       killPlayer(client) -- call the function with the local player as the argument
+   end,
+   DoubleClick = true,
+   Tooltip = 'Puts you in god mode lol'
+})
+
+local MyButton = LeftGroupBox:AddButton({
+   Text = 'Fully Heal',
+   Func = function()
+       local Players = game:GetService("Players")
+       local ReplicatedStorage = game:GetService("ReplicatedStorage")
+       
+       local client = Players.LocalPlayer
+       local remote = ReplicatedStorage.WeaponFrameworkRep.Events.Damage
+       
+       local function killPlayer(player)
+           if player == client then
+               local character = player.Character
+               if character then
+                   local instance = character:GetChildren()[1]
+                   local args = {
+                       19742,
+                       {instance},
+                       {
+                           ["DamageHumanoid"] = {
+                               ["Value"] = -100, -- change to negative infinity for infinite health
+                           },
+                           ["DamageVehicle"] = {
+                               ["Value"] = -100,
+                           },
+                           ["Explosive"] = {
+                               ["ExplosiveDamageHumanoid"] = {
+                                   ["Value"] = -100,
+                               },
+                               ["ExplosiveDamageVehicle"] = {
+                                   ["Value"] = -100,
+                               },
+                           },
+                       },
+                       Vector3.new(0,0,0)
+                   }
+                   remote:FireServer(unpack(args))
+               end
+           end
+       end
+       
+       killPlayer(client) -- call the function with the local player as the argument
+   end,
+   DoubleClick = false,
+   Tooltip = 'Healing Function [100HP]'
+})
+
+local MyButton2 = MyButton:AddButton({
+   Text = 'Half Heal',
+   Func = function()
+       local Players = game:GetService("Players")
+       local ReplicatedStorage = game:GetService("ReplicatedStorage")
+       
+       local client = Players.LocalPlayer
+       local remote = ReplicatedStorage.WeaponFrameworkRep.Events.Damage
+       
+       local function killPlayer(player)
+           if player == client then
+               local character = player.Character
+               if character then
+                   local instance = character:GetChildren()[1]
+                   local args = {
+                       19742,
+                       {instance},
+                       {
+                           ["DamageHumanoid"] = {
+                               ["Value"] = -50, -- change to negative infinity for infinite health
+                           },
+                           ["DamageVehicle"] = {
+                               ["Value"] = -50,
+                           },
+                           ["Explosive"] = {
+                               ["ExplosiveDamageHumanoid"] = {
+                                   ["Value"] = -50,
+                               },
+                               ["ExplosiveDamageVehicle"] = {
+                                   ["Value"] = -50,
+                               },
+                           },
+                       },
+                       Vector3.new(0,0,0)
+                   }
+                   remote:FireServer(unpack(args))
+               end
+           end
+       end
+       
+       killPlayer(client) -- call the function with the local player as the argument
+   end,
+   DoubleClick = true, -- You will have to click this button twice to trigger the callback
+   Tooltip = 'Healing Function [50HP]'
+})
+
+local MyButton = LeftGroupBox:AddButton({
+   Text = 'Suicide',
+   Func = function()
+       game.Players.LocalPlayer.Character.Humanoid.Health = 0
+   end,
+   DoubleClick = false,
+   Tooltip = 'Are you tired of your life? Press this.'
+})
+
+local MyButton = LeftGroupBox:AddButton({
+   Text = 'Anti Seat',
+   Func = function()
+       for i,v in next, workspace:GetDescendants() do
+           if v:IsA'Seat' then
+               v:Destroy()
+           end
+       end
+   end,
+   DoubleClick = false,
+   Tooltip = 'This Will Make It So You Cant Sit.'
+})
+
+local MyButton = LeftGroupBox:AddButton({
+   Text = 'Anti Cheat Bypass',
+   Func = function()
+       for k,v in pairs(getgc(true)) do
+           if pcall(function() return rawget(v,"indexInstance") end) and type(rawget(v,"indexInstance")) == "table" and  (rawget(v,"indexInstance"))[1] == "kick" then
+               v.tvk = {"kick",function() return game.Workspace:WaitForChild("") end}
+           end
+        end
+   end,
+   DoubleClick = false,
+   Tooltip = 'Bypass this shit ass anticheat [R3AP3R BYPA$$]'
+})
+
+
+local MyButton = LeftGroupBox:AddButton({
+   Text = 'Rejoin',
+   Func = function()
+       game:GetService("TeleportService"):Teleport(game.PlaceId, game:GetService("Players").LocalPlayer)
+   end,
+   DoubleClick = false,
+   Tooltip = 'This is the main button'
+})
+
+LeftGroupBox:AddSlider('MySlider', {
+   Text = 'Field of View Slider',
+   Default = 70,
+   Min = 70,
+   Max = 120,
+   Rounding = 1,
+   Compact = false,
+
+   Callback = function(Value)
+       game:GetService("Workspace").Camera.FieldOfView = value
+   end
+})
+
+--[[
+   NOTE: You can chain the button methods!
+   EXAMPLE:
+
+   LeftGroupBox:AddButton({ Text = 'Kill all', Func = Functions.KillAll, Tooltip = 'This will kill everyone in the game!' })
+       :AddButton({ Text = 'Kick all', Func = Functions.KickAll, Tooltip = 'This will kick everyone in the game!' })
+]]
+
+-- Groupbox:AddLabel
+
+
+-- Groupbox:AddDivider
+-- Arguments: None
+LeftGroupBox:AddDivider()
+
+--[[
+   Groupbox:AddSlider
+   Arguments: Idx, SliderOptions
+
+   SliderOptions: {
+       Text = string,
+       Default = number,
+       Min = number,
+       Max = number,
+       Suffix = string,
+       Rounding = number,
+       Compact = boolean,
+       HideMax = boolean,
+   }
+
+   Text, Default, Min, Max, Rounding must be specified.
+   Suffix is optional.
+   Rounding is the number of decimal places for precision.
+
+   Compact will hide the title label of the Slider
+
+   HideMax will only display the value instead of the value & max value of the slider
+   Compact will do the same thing
+]]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+local TabBox = Tabs.Main:AddRightTabbox() -- Add Tabbox on right side
+
+-- Anything we can do in a Groupbox, we can do in a Tabbox tab (AddToggle, AddSlider, AddLabel, etc etc...)
+local Tab1 = TabBox:AddTab('Tab 1')
+Tab1:AddToggle('Tab1Toggle', { Text = 'Tab1 Toggle' });
+
+local Tab2 = TabBox:AddTab('Tab 2')
+Tab2:AddToggle('Tab2Toggle', { Text = 'Tab2 Toggle' });
+
+-- Dependency boxes let us control the visibility of UI elements depending on another UI elements state.
+-- e.g. we have a 'Feature Enabled' toggle, and we only want to show that features sliders, dropdowns etc when it's enabled!
+-- Dependency box example:
+local RightGroupbox = Tabs.Main:AddRightGroupbox('Exploits ig');
+
+RightGroupbox:AddButton('Remove AC', function()
+   local Encrypt = function(str, key)
+       local byte = string.byte
+       local sub = string.sub
+       local char = string.char
+   
+       local endStr = {}
+   
+       for i = 1, #str do
+           local keyPos = (i % #key) + 1
+           endStr[i] = char(((byte(sub(str, i, i)) + byte(sub(key, keyPos, keyPos)))%126) + 1)
+       end
+   
+       endStr = table.concat(endStr)
+       return endStr
+   end
+   
+   local Require = function(received)
+       local client_loader = getcallingscript()
+       local client_values = received.Parent.Special
+       local client_remote = string.split(client_values.Value, "\\")[1]
+       local client_encode = string.split(client_values.Value, "\\")[2]
+       local client_module = received
+       local client_signal = Instance.new("BindableEvent")
+       local client_handle = nil
+   
+       local client_args = {
+           Mode = "Fire",
+           Module = client_module,
+           Loader = client_loader,
+           Sent = 0,
+           Received = 0
+       }
+   
+       client_remote = game:FindFirstChild(client_remote, true)
+   
+       client_handle = client_remote.OnClientEvent:Connect(function(_, name, key)
+           if string.find(name, "GIVE_KEY") then
+               client_handle:Disconnect()
+               client_handle = nil
+               client_signal:Fire(key)
+               client_signal:Destroy()
+               client_signal = nil
+           end
+       end)
+   
+       client_remote:FireServer(client_args, client_encode .. "GET_KEY")
+   
+       client_signal.Event:Once(function(client_key)
+           local client_code = Encrypt("ClientCheck", client_key)
+   
+           while true do
+               client_args.Sent = client_args.Sent + 1
+   
+               local args = {
+                   [1] = client_args,
+                   [2] = client_code,
+                   [3] = {
+                       Received = client_args.Received,
+                       Sent = client_args.Sent - 1
+                   },
+                   [4] = client_encode,
+                   -- [5] = math.random()
+               }
+   
+               client_remote:FireServer(unpack(args))
+               task.wait(3)
+           end
+       end)
+   end
+   
+   
+   local old
+   old = hookfunction(getrenv().require, function(module, ...)
+       if module.Name == "Client" and module.Parent:FindFirstChild("Special") then
+           task.spawn(Require, module)
+           return coroutine.yield()
+       end
+       return old(module, ...)
+   end)
+end)
+
+RightGroupbox:AddButton('Remove Cooldowns', function()
+   game:GetService("Workspace")["Kassa Overval Systeem"].Kassa.Kassa.Cooldown:Destroy()
+   game:GetService("Workspace")["Kassa Overval Systeem"].Kassa.Kassa.Cooldown:Destroy()
+   game:GetService("Workspace")["Kassa Overval Systeem"].Kassa.Kassa.Cooldown:Destroy()
+   game:GetService("Workspace").Plank11.Trigger.Cooldown:Destroy()
+   game:GetService("Workspace").Plank12.Trigger.Cooldown:Destroy()
+   game:GetService("Workspace").Plank8.Trigger.Cooldown:Destroy()
+   game:GetService("Workspace").Plank9.Trigger.Cooldown:Destroy()
+   game:GetService("Workspace").Plank7.Trigger.Cooldown:Destroy()
+   game:GetService("Workspace").Plank4.Trigger.Cooldown:Destroy()
+   game:GetService("Workspace").Plank5.Trigger.Cooldown:Destroy()
+   game:GetService("Workspace").Plank6.Trigger.Cooldown:Destroy()
+   game:GetService("Workspace").Plank3.Trigger.Cooldown:Destroy()
+   game:GetService("Workspace").Plank2.Trigger.Cooldown:Destroy()
+   game:GetService("Workspace").Plank1.Trigger.Cooldown:Destroy()
+   game:GetService("Workspace").Plank10.Trigger.Cooldown:Destroy()
+end)
+
+RightGroupbox:AddButton('Fly [V]', function()
+  local FlyKey = Enum.KeyCode.V
+           local SpeedKey = Enum.KeyCode.LeftControl
+           
+           local SpeedKeyMultiplier = 3
+           local FlightSpeed = 256
+           local FlightAcceleration = 4
+           local TurnSpeed = 16
+           
+           
+           local UserInputService = game:GetService("UserInputService")
+           local StarterGui = game:GetService("StarterGui")
+           local RunService = game:GetService("RunService")
+           local Players = game:GetService("Players")
+           local User = Players.LocalPlayer
+           local Camera = workspace.CurrentCamera
+           local UserCharacter = nil
+           local UserRootPart = nil
+           local Connection = nil
+           
+           
+           workspace.Changed:Connect(function()
+               Camera = workspace.CurrentCamera
+           end)
+           
+           local setCharacter = function(c)
+               UserCharacter = c
+               UserRootPart = c:WaitForChild("HumanoidRootPart")
+           end
+           
+           User.CharacterAdded:Connect(setCharacter)
+           if User.Character then
+               setCharacter(User.Character)
+           end
+           
+           local CurrentVelocity = Vector3.new(0,0,0)
+           local Flight = function(delta)
+               local BaseVelocity = Vector3.new(0,0,0)
+               if not UserInputService:GetFocusedTextBox() then
+                   if UserInputService:IsKeyDown(Enum.KeyCode.W) then
+                       BaseVelocity = BaseVelocity + (Camera.CFrame.LookVector * FlightSpeed)
+                   end
+                   if UserInputService:IsKeyDown(Enum.KeyCode.A) then
+                       BaseVelocity = BaseVelocity - (Camera.CFrame.RightVector * FlightSpeed)
+                   end
+                   if UserInputService:IsKeyDown(Enum.KeyCode.S) then
+                       BaseVelocity = BaseVelocity - (Camera.CFrame.LookVector * FlightSpeed)
+                   end
+                   if UserInputService:IsKeyDown(Enum.KeyCode.D) then
+                       BaseVelocity = BaseVelocity + (Camera.CFrame.RightVector * FlightSpeed)
+                   end
+                   if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+                       BaseVelocity = BaseVelocity + (Camera.CFrame.UpVector * FlightSpeed)
+                   end
+                   if UserInputService:IsKeyDown(SpeedKey) then
+                       BaseVelocity = BaseVelocity * SpeedKeyMultiplier
+                   end
+               end
+               if UserRootPart then
+                   local car = UserRootPart:GetRootPart()
+                   if car.Anchored then return end
+                   if not isnetworkowner(car) then return end
+                   CurrentVelocity = CurrentVelocity:Lerp(
+                       BaseVelocity,
+                       math.clamp(delta * FlightAcceleration, 0, 1)
+                   )
+                   car.Velocity = CurrentVelocity + Vector3.new(0,2,0)
+                   if car ~= UserRootPart then
+                       car.RotVelocity = Vector3.new(0,0,0)
+                       car.CFrame = car.CFrame:Lerp(CFrame.lookAt(
+                           car.Position,
+                           car.Position + CurrentVelocity + Camera.CFrame.LookVector
+                       ), math.clamp(delta * TurnSpeed, 0, 1))
+                   end
+               end
+           end
+           
+           UserInputService.InputBegan:Connect(function(userInput,gameProcessed)
+               if gameProcessed then return end
+               if userInput.KeyCode == FlyKey then
+                   if Connection then
+                       StarterGui:SetCore("SendNotification",{
+                           Title = "Fr0zenL4ke.ez's Admin",
+                           Text = "Flight Disabled"
+                       })
+                       Connection:Disconnect()
+                       Connection = nil
+                   else
+                       StarterGui:SetCore("SendNotification",{
+                           Title = "Fr0zenL4ke.ez Tool",
+                           Text = "Flight Enabled"
+                       })
+                       CurrentVelocity = UserRootPart.Velocity
+                       Connection = RunService.Heartbeat:Connect(Flight)
+                   end
+               end
+           end)
+           
+           StarterGui:SetCore("SendNotification",{
+               Title = "Fr0zenL4ke.ez Tool",
+               Text = "Loaded Fly Tool"
+           })
+end)
+
+RightGroupbox:AddToggle('Noclip', {
+   Text = 'Noclip',
+   Default = false,
+   Tooltip = 'Can walk through walls',
+   Callback = function(bool)
+       if (bool) then
+           NoclipLoop = game:GetService("RunService").Stepped:Connect(function()
+               for i,v in pairs(game.Players.LocalPlayer.Character:GetChildren()) do
+                   if v:IsA("BasePart") and v.CanCollide == true then
+                       v.CanCollide = false
+                   end
+               end
+           end)
+       elseif bool == false and NoclipLoop then
+           NoclipLoop:Disconnect()
+       end
+   end
+})
+
+
+RightGroupbox:AddToggle('Infj', {
+   Text = 'Infinite Jump',
+   Default = false,
+   Tooltip = 'Can jump infinitely',
+   Callback = function(Value)
+       _G.infinjump = (Value)
+
+           -- Get the local player and their mouse
+           local player = game:GetService("Players").LocalPlayer
+           local mouse = player:GetMouse()
+           
+           -- Listen for the spacebar key press to jump repeatedly
+           mouse.KeyDown:connect(function(key)
+               if _G.infinjump and key:byte() == 32 then
+                   local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+                   if humanoid then
+                       humanoid:ChangeState("Jumping")
+                       wait(0.1)
+                       humanoid:ChangeState("Seated")
+                   end
+               end
+           end)
+   end
+})
+
+
+
+RightGroupbox:AddToggle('Bhop', {
+   Text = 'Bunnyhop',
+   Default = false,
+   Tooltip = 'Auto-Jump With Walkspeed, A so-called Bunnyhop',
+   Callback = function(Value)
+       _G.bhop = Value
+
+       local originalWalkSpeed = game.Players.LocalPlayer.Character.Humanoid.WalkSpeed
+       local originalGravity = game.Workspace.Gravity
+       local originalJumpPower = game.Players.LocalPlayer.Character.Humanoid.JumpPower
+       
+       if _G.bhop then
+           game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = 180
+           game.Workspace.Gravity = 500
+           game.Players.LocalPlayer.Character.Humanoid.JumpPower = 80
+           
+           game:GetService("RunService").Heartbeat:Connect(function()
+               if _G.bhop then
+                   game.Players.LocalPlayer.Character.Humanoid.Jump = true
+               end
+           end)
+       else
+           game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = originalWalkSpeed
+           game.Workspace.Gravity = originalGravity
+           game.Players.LocalPlayer.Character.Humanoid.JumpPower = originalJumpPower
+       end
+       
+       
+   end
+})
+
+
+
+
+
+local Bang = Tabs.Main:AddRightGroupbox('Basic Shit');
+
+Bang:AddToggle('Walkspeed', {
+   Text = 'Enable Walkspeed',
+   Default = false,
+   Tooltip = 'Enables the walkspeed toggle so the slider works',
+   Callback = function(Value)
+       walkspeedEnabled = Value
+       if not bool then
+           -- if the toggle is disabled, set the walkspeed to 16
+           game:GetService("Players").LocalPlayer.Character.Humanoid.WalkSpeed = 16
+       end
+   end
+})
+
+
+Bang:AddSlider('Walkspeed', {
+   Text = 'Walkspeed Slider',
+   Default = 16,
+   Min = 16,
+   Max = 250,
+   Rounding = 1,
+   Compact = false,
+
+   Callback = function(Value)
+       if walkspeedEnabled then
+           game:GetService("Players").LocalPlayer.Character.Humanoid.WalkSpeed = Value
+       end
+   end
+})
+
+
+
+
+Bang:AddToggle('Jumppower', {
+   Text = 'Enable Jump Height',
+   Default = false,
+   Tooltip = 'Enables the Jumppower toggle so the slider works',
+   Callback = function(Value)
+       walkspeedEnabled = Value
+       if not bool then
+           -- if the toggle is disabled, set the walkspeed to 16
+           game:GetService("Players").LocalPlayer.Character.Humanoid.JumpPower = 16
+       end
+   end
+})
+
+
+Bang:AddSlider('Jumppower', {
+   Text = 'Walkspeed Slider',
+   Default = 50,
+   Min = 50,
+   Max = 250,
+   Rounding = 1,
+   Compact = false,
+
+   Callback = function(Value)
+       if walkspeedEnabled then
+           game:GetService("Players").LocalPlayer.Character.Humanoid.JumpPower = Value
+       end
+   end
+})
+
+
+
+local Online = Tabs.Online:AddLeftGroupbox('Whole Server [⚠️⚠️⚠️]')
+
+Online:AddButton('Kill All', function() 
+   local Players = game:GetService("Players")
+   local ReplicatedStorage = game:GetService("ReplicatedStorage")
+   
+   local client = Players.LocalPlayer
+   local remote = ReplicatedStorage.WeaponFrameworkRep.Events.Damage
+   
+   local function killPlayer(player)
+       local character = player.Character
+       if character then
+           local instance = character:GetChildren()[1]
+           local args = {
+               19742,
+               {instance},
+               {
+                   ["DamageHumanoid"] = {
+                       ["Value"] = math.huge,
+                   },
+                   ["DamageVehicle"] = {
+                       ["Value"] = math.huge,
+                   },
+                   ["Explosive"] = {
+                       ["ExplosiveDamageHumanoid"] = {
+                           ["Value"] = math.huge,
+                       },
+                       ["ExplosiveDamageVehicle"] = {
+                           ["Value"] = math.huge,
+                       },
+                   },
+               },
+               Vector3.new(0,0,0)
+           }
+           remote:FireServer(unpack(args))
+       end
+   end
+   
+   for _,v in pairs(Players:GetPlayers()) do -- remove get players for name
+       killPlayer(v)
+   end
+end)
+
+Online:AddButton('Kill Others', function() 
+   local Players = game:GetService("Players")
+   local ReplicatedStorage = game:GetService("ReplicatedStorage")
+   
+   local client = Players.LocalPlayer
+   local remote = ReplicatedStorage.WeaponFrameworkRep.Events.Damage
+   
+   local function killPlayer(player)
+       local character = player.Character
+       if character then
+           local instance = character:GetChildren()[1]
+           local args = {
+               19742,
+               {instance},
+               {
+                   ["DamageHumanoid"] = {
+                       ["Value"] = math.huge,
+                   },
+                   ["DamageVehicle"] = {
+                       ["Value"] = math.huge,
+                   },
+                   ["Explosive"] = {
+                       ["ExplosiveDamageHumanoid"] = {
+                           ["Value"] = math.huge,
+                       },
+                       ["ExplosiveDamageVehicle"] = {
+                           ["Value"] = math.huge,
+                       },
+                   },
+               },
+               Vector3.new(0,0,0)
+           }
+           remote:FireServer(unpack(args))
+       end
+   end
+   
+   for _,v in pairs(Players:GetPlayers()) do
+       if v ~= Players.LocalPlayer then -- Check if the player is not the LocalPlayer
+           killPlayer(v)
+       end
+   end
+end)
+
+Online:AddButton('Kill Random', function() 
+   local ReplicatedStorage = game:GetService("ReplicatedStorage")
+   
+   local client = Players.LocalPlayer
+   local remote = ReplicatedStorage.WeaponFrameworkRep.Events.Damage
+   
+   local function killPlayer(player)
+       local character = player.Character
+       if character then
+           local instance = character:GetChildren()[1]
+           local args = {
+               19742,
+               {instance},
+               {
+                   ["DamageHumanoid"] = {
+                       ["Value"] = math.huge,
+                   },
+                   ["DamageVehicle"] = {
+                       ["Value"] = math.huge,
+                   },
+                   ["Explosive"] = {
+                       ["ExplosiveDamageHumanoid"] = {
+                           ["Value"] = math.huge,
+                       },
+                       ["ExplosiveDamageVehicle"] = {
+                           ["Value"] = math.huge,
+                       },
+                   },
+               },
+               Vector3.new(0,0,0)
+           }
+           remote:FireServer(unpack(args))
+       end
+   end
+   
+   local playersList = Players:GetPlayers()
+   local randomIndex = math.random(1, #playersList)
+   local targetPlayer = playersList[randomIndex]
+   
+   killPlayer(targetPlayer)
+end)
+
+Online:AddButton('God All', function() 
+   local Players = game:GetService("Players")
+   local ReplicatedStorage = game:GetService("ReplicatedStorage")
+   
+   local client = Players.LocalPlayer
+   local remote = ReplicatedStorage.WeaponFrameworkRep.Events.Damage
+   
+   local function killPlayer(player)
+       local character = player.Character
+       if character then
+           local instance = character:GetChildren()[1]
+           local args = {
+               19742,
+               {instance},
+               {
+                   ["DamageHumanoid"] = {
+                       ["Value"] = -math.huge,
+                   },
+                   ["DamageVehicle"] = {
+                       ["Value"] = -math.huge,
+                   },
+                   ["Explosive"] = {
+                       ["ExplosiveDamageHumanoid"] = {
+                           ["Value"] = -math.huge,
+                       },
+                       ["ExplosiveDamageVehicle"] = {
+                           ["Value"] = -math.huge,
+                       },
+                   },
+               },
+               Vector3.new(0,0,0)
+           }
+           remote:FireServer(unpack(args))
+       end
+   end
+   
+   for _,v in pairs(Players:GetPlayers()) do -- remove get players for name
+       killPlayer(v)
+   end
+end)
+
+Online:AddButton('Heal All', function() 
+   local Players = game:GetService("Players")
+   local ReplicatedStorage = game:GetService("ReplicatedStorage")
+   
+   local client = Players.LocalPlayer
+   local remote = ReplicatedStorage.WeaponFrameworkRep.Events.Damage
+   
+   local function killPlayer(player)
+       local character = player.Character
+       if character then
+           local instance = character:GetChildren()[1]
+           local args = {
+               19742,
+               {instance},
+               {
+                   ["DamageHumanoid"] = {
+                       ["Value"] = -100,
+                   },
+                   ["DamageVehicle"] = {
+                       ["Value"] = -100,
+                   },
+                   ["Explosive"] = {
+                       ["ExplosiveDamageHumanoid"] = {
+                           ["Value"] = -100,
+                       },
+                       ["ExplosiveDamageVehicle"] = {
+                           ["Value"] = -100,
+                       },
+                   },
+               },
+               Vector3.new(0,0,0)
+           }
+           remote:FireServer(unpack(args))
+       end
+   end
+   
+   for _,v in pairs(Players:GetPlayers()) do -- remove get players for name
+       killPlayer(v)
+   end
+end)
+
+Online:AddButton('Damage All [50HP]', function() 
+   local Players = game:GetService("Players")
+   local ReplicatedStorage = game:GetService("ReplicatedStorage")
+   
+   local client = Players.LocalPlayer
+   local remote = ReplicatedStorage.WeaponFrameworkRep.Events.Damage
+   
+   local function killPlayer(player)
+       local character = player.Character
+       if character then
+           local instance = character:GetChildren()[1]
+           local args = {
+               19742,
+               {instance},
+               {
+                   ["DamageHumanoid"] = {
+                       ["Value"] = 50,
+                   },
+                   ["DamageVehicle"] = {
+                       ["Value"] = 50,
+                   },
+                   ["Explosive"] = {
+                       ["ExplosiveDamageHumanoid"] = {
+                           ["Value"] = 50,
+                       },
+                       ["ExplosiveDamageVehicle"] = {
+                           ["Value"] = 50,
+                       },
+                   },
+               },
+               Vector3.new(0,0,0)
+           }
+           remote:FireServer(unpack(args))
+       end
+   end
+   
+   for _,v in pairs(Players:GetPlayers()) do -- remove get players for name
+       killPlayer(v)
+   end
+end)
+
+Online:AddButton('Ring All ⚠️', function() 
+  local Players = game:GetService("Players")
+   local ReplicatedStorage = game:GetService("ReplicatedStorage")
+   
+   local remote = ReplicatedStorage.Apartments.Aanbellen
+   
+   local function applyAanbellen(player)
+       local args = {"Enter", "01"}
+       remote:FireServer(player, unpack(args))
+   end
+   
+   for _, player in ipairs(Players:GetPlayers()) do
+       applyAanbellen(player)
+   end
+   
+   Players.PlayerAdded:Connect(function(player)
+       applyAanbellen(player)
+   end)
+   wait(0.5)
+   local Players = game:GetService("Players")
+   local ReplicatedStorage = game:GetService("ReplicatedStorage")
+   
+   local remote = ReplicatedStorage.Huurwinkel.Aanbellen
+   
+   local function applyAanbellen(player)
+       local args = {"Enter", "01"}
+       remote:FireServer(player, unpack(args))
+   end
+   
+   for _, player in ipairs(Players:GetPlayers()) do
+       applyAanbellen(player)
+   end
+   
+   Players.PlayerAdded:Connect(function(player)
+       applyAanbellen(player)
+   end)
+   wait(0.5)
+      local Players = game:GetService("Players")
+   local ReplicatedStorage = game:GetService("ReplicatedStorage")
+   
+   local remote = ReplicatedStorage.Loods.Aanbellen
+   
+   local function applyAanbellen(player)
+       local args = {"Enter", "01"}
+       remote:FireServer(player, unpack(args))
+   end
+   
+   for _, player in ipairs(Players:GetPlayers()) do
+       applyAanbellen(player)
+   end
+   
+   Players.PlayerAdded:Connect(function(player)
+       applyAanbellen(player)
+   end)
+   wait(0.5)
+   local Players = game:GetService("Players")
+   local ReplicatedStorage = game:GetService("ReplicatedStorage")
+   
+   local remote = ReplicatedStorage.Schuur.Aanbellen
+   
+   local function applyAanbellen(player)
+       local args = {"Enter", "01"}
+       remote:FireServer(player, unpack(args))
+   end
+   
+   for _, player in ipairs(Players:GetPlayers()) do
+       applyAanbellen(player)
+   end
+   
+   Players.PlayerAdded:Connect(function(player)
+       applyAanbellen(player)
+   end)
+   wait(0.5)
+   local Players = game:GetService("Players")
+   local ReplicatedStorage = game:GetService("ReplicatedStorage")
+   
+   local remote = ReplicatedStorage.Villa.Aanbellen
+   
+   local function applyAanbellen(player)
+       local args = {"Enter", "01"}
+       remote:FireServer(player, unpack(args))
+   end
+   
+   for _, player in ipairs(Players:GetPlayers()) do
+       applyAanbellen(player)
+   end
+   
+   Players.PlayerAdded:Connect(function(player)
+       applyAanbellen(player)
+   end)
+   wait(0.5)
+    local Players = game:GetService("Players")
+   local ReplicatedStorage = game:GetService("ReplicatedStorage")
+   
+   local remote = ReplicatedStorage.Zolder.Aanbellen
+   
+   local function applyAanbellen(player)
+       local args = {"Enter", "01"}
+       remote:FireServer(player, unpack(args))
+   end
+   
+   for _, player in ipairs(Players:GetPlayers()) do
+       applyAanbellen(player)
+   end
+   
+   Players.PlayerAdded:Connect(function(player)
+       applyAanbellen(player)
+   end)
+end)
+
+Online:AddButton('We Do A Little Trolling ⚠️', function() 
+   for _, Target in ipairs(game.Players:GetPlayers()) do
+       if Target ~= game.Players.LocalPlayer then
+           local oldCFrame = game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame
+           
+           local Thrust = Instance.new('BodyThrust', game.Players.LocalPlayer.Character.HumanoidRootPart)
+           Thrust.Force = Vector3.new(9999, 9999, 9999)
+           Thrust.Name = "YeetForce"
+           
+           repeat
+               game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = Target.Character.HumanoidRootPart.CFrame
+               Thrust.Location = Target.Character.HumanoidRootPart.Position
+               game:FindService("RunService").Heartbeat:wait()
+           until not Target.Character:FindFirstChild("Head")
+           
+           wait(3)  -- wait for 3 seconds
+           
+           game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = oldCFrame
+           
+           Thrust:Destroy() -- remove the BodyThrust instance
+       end
+   end
+end)
+
+Online:AddButton('Lag Server Out [⚠️ MAJOR RISK ⚠️]', function() 
+local Message = "⛓" 
+local Unicode = " "
+Message = Message .. Unicode:rep(200 - #Message)
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local SayMessageRequest = ReplicatedStorage:FindFirstChild("SayMessageRequest", true)
+
+if SayMessageRequest then
+   for i = 1, 7 do
+       SayMessageRequest:FireServer(Message, "All")
+   end
+end
+end)
+
+local Online = Tabs.Online:AddRightGroupbox('Single Player Functions [⚠️⚠️]');
+
+local selectedPlayer = nil
+
+local playerValues = {"None Selected"}
+
+local function updatePlayerValues()
+   playerValues = {"None Selected"}
+   for _, player in ipairs(game:GetService("Players"):GetPlayers()) do
+       table.insert(playerValues, player.Name)
+   end
+end
+
+updatePlayerValues()
+
+local function updateDropdownValues()
+   Options.Showserver:SetValues(playerValues)
+end
+
+Online:AddDropdown('Showserver', {
+   Values = playerValues,
+   Default = 1, -- number index of the value / string
+   Multi = false, -- true / false, allows multiple choices to be selected
+
+   Text = 'Select Target Here',
+   Tooltip = 'Select Your Target', -- Information shown when you hover over the dropdown
+
+   Callback = function(val)
+       selectedPlayer = val
+   end
+})
+
+Options.Showserver:OnChanged(function()
+   print("Dropdown got changed. New value:", selectedPlayer)
+end)
+
+game:GetService("Players").PlayerAdded:Connect(function(player)
+   updatePlayerValues()
+   updateDropdownValues()
+end)
+
+game:GetService("Players").PlayerRemoving:Connect(function(player)
+   updatePlayerValues()
+   updateDropdownValues()
+end)
+
+Online:AddLabel('Functions | Moderation System', true)
+
+Online:AddToggle('View', {
+   Text = 'View Target',
+   Default = false,
+   Tooltip = 'Views the target',
+   Callback = function(Value)
+       if Value then
+           local playerName = selectedPlayer -- Replace "name" with the partial or full username of the player you want to target
+
+           -- Find the player object with the given name
+           local player = nil
+           for _, p in pairs(game:GetService("Players"):GetPlayers()) do
+               if string.find(p.Name:lower(), playerName:lower()) then
+                   player = p
+                   break
+               end
+           end
+           
+           -- Set the camera subject to the player's humanoid if they exist
+           if player then
+               game.Workspace.CurrentCamera.CameraSubject = player.Character.Humanoid
+           else
+               local player = game:GetService("Players").LocalPlayer
+               game.Workspace.CurrentCamera.CameraSubject = player.Character.Humanoid
+           end
+       else
+           game.Workspace.CurrentCamera.CameraSubject = game:GetService("Players").LocalPlayer.Character.Humanoid
+       end
+   end
+})
+
+Online:AddToggle('looptp', {
+   Text = 'LoopTP To Target',
+   Default = false,
+   Tooltip = 'LoopTP You To The Target',
+   Callback = function(Value)
+       loopTeleport = Value
+       if loopTeleport then
+           while loopTeleport do
+               -- Replace "TO" with the partial or full username of the player you want to teleport to
+               local partialName = selectedPlayer
+               local Players = game:GetService("Players")
+               local player = nil
+               for _, p in ipairs(Players:GetPlayers()) do
+                   if string.find(string.lower(p.Name), string.lower(partialName)) then
+                       player = p
+                       break
+                   end
+               end
+               if player then
+                   local p1 = game.Players.LocalPlayer.Character.HumanoidRootPart
+                   local p2 = player.Name
+                   local pos = p1.CFrame
+                   p1.CFrame = game.Players[p2].Character.HumanoidRootPart.CFrame
+               else
+                   print("Could not find player with name containing '" .. partialName .. "'")
+               end
+               wait() -- wait 1 second before teleporting again
+           end
+       else
+           print("Uit")
+       end
+   end
+})
+
+
+
+
+Online:AddButton('TP To Target', function() 
+    -- Replace "TO" with the partial or full username of the player you want to teleport to
+local partialName = selectedPlayer
+
+local Players = game:GetService("Players")
+local player = nil
+for _, p in ipairs(Players:GetPlayers()) do
+if string.find(string.lower(p.Name), string.lower(partialName)) then
+player = p
+break
+end
+end
+
+if player then
+local p1 = game.Players.LocalPlayer.Character.HumanoidRootPart
+local p2 = player.Name
+local pos = p1.CFrame
+p1.CFrame = game.Players[p2].Character.HumanoidRootPart.CFrame
+else
+   print("Could not find player with name containing '" .. partialName .. "'")
+   end
+end)
+
+Online:AddLabel('Functions | Trolling.', true)
+
+Online:AddButton('Kill Target', function() 
+   if selectedPlayer then
+       local targetPlayerName = selectedPlayer
+
+       local Players = game:GetService("Players")
+       local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+       local client = Players.LocalPlayer
+       local remote = ReplicatedStorage.WeaponFrameworkRep.Events.Damage
+
+       local function killPlayer(player)
+           local character = player.Character
+           if character then
+               local instance = character:GetChildren()[1]
+               local args = {
+                   19742,
+                   {instance},
+                   {
+                       ["DamageHumanoid"] = {
+                           ["Value"] = math.huge,
+                       },
+                       ["DamageVehicle"] = {
+                           ["Value"] = math.huge,
+                       },
+                       ["Explosive"] = {
+                           ["ExplosiveDamageHumanoid"] = {
+                               ["Value"] = math.huge,
+                           },
+                           ["ExplosiveDamageVehicle"] = {
+                               ["Value"] = math.huge,
+                           },
+                       },
+                   },
+                   Vector3.new(0,0,0)
+               }
+               remote:FireServer(unpack(args))
+           end
+       end
+
+       for _,player in pairs(Players:GetPlayers()) do
+           if player.Name == targetPlayerName then
+               killPlayer(player)
+           end
+       end
+   end
+end)
+
+Online:AddButton('Damage Target [50HP]', function() 
+   if selectedPlayer then
+       local targetPlayerName = selectedPlayer
+
+       local Players = game:GetService("Players")
+       local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+       local client = Players.LocalPlayer
+       local remote = ReplicatedStorage.WeaponFrameworkRep.Events.Damage
+
+       local function killPlayer(player)
+           local character = player.Character
+           if character then
+               local instance = character:GetChildren()[1]
+               local args = {
+                   19742,
+                   {instance},
+                   {
+                       ["DamageHumanoid"] = {
+                           ["Value"] = 50,
+                       },
+                       ["DamageVehicle"] = {
+                           ["Value"] = 50,
+                       },
+                       ["Explosive"] = {
+                           ["ExplosiveDamageHumanoid"] = {
+                               ["Value"] = 50,
+                           },
+                           ["ExplosiveDamageVehicle"] = {
+                               ["Value"] = 50,
+                           },
+                       },
+                   },
+                   Vector3.new(0,0,0)
+               }
+               remote:FireServer(unpack(args))
+           end
+       end
+
+       for _,player in pairs(Players:GetPlayers()) do
+           if player.Name == targetPlayerName then
+               killPlayer(player)
+           end
+       end
+   end
+end)
+
+Online:AddLabel('Functions | Friendly.', true)
+
+Online:AddButton('God Target', function() 
+   if selectedPlayer then
+       local targetPlayerName = selectedPlayer
+
+       local Players = game:GetService("Players")
+       local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+       local client = Players.LocalPlayer
+       local remote = ReplicatedStorage.WeaponFrameworkRep.Events.Damage
+
+       local function killPlayer(player)
+           local character = player.Character
+           if character then
+               local instance = character:GetChildren()[1]
+               local args = {
+                   19742,
+                   {instance},
+                   {
+                       ["DamageHumanoid"] = {
+                           ["Value"] = -math.huge,
+                       },
+                       ["DamageVehicle"] = {
+                           ["Value"] = -math.huge,
+                       },
+                       ["Explosive"] = {
+                           ["ExplosiveDamageHumanoid"] = {
+                               ["Value"] = -math.huge,
+                           },
+                           ["ExplosiveDamageVehicle"] = {
+                               ["Value"] = -math.huge,
+                           },
+                       },
+                   },
+                   Vector3.new(0,0,0)
+               }
+               remote:FireServer(unpack(args))
+           end
+       end
+
+       for _,player in pairs(Players:GetPlayers()) do
+           if player.Name == targetPlayerName then
+               killPlayer(player)
+           end
+       end
+   end
+end)
+
+Online:AddButton('Fully Heal Target', function() 
+   if selectedPlayer then
+       local targetPlayerName = selectedPlayer
+
+       local Players = game:GetService("Players")
+       local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+       local client = Players.LocalPlayer
+       local remote = ReplicatedStorage.WeaponFrameworkRep.Events.Damage
+
+       local function killPlayer(player)
+           local character = player.Character
+           if character then
+               local instance = character:GetChildren()[1]
+               local args = {
+                   19742,
+                   {instance},
+                   {
+                       ["DamageHumanoid"] = {
+                           ["Value"] = -100,
+                       },
+                       ["DamageVehicle"] = {
+                           ["Value"] = -100,
+                       },
+                       ["Explosive"] = {
+                           ["ExplosiveDamageHumanoid"] = {
+                               ["Value"] = -100,
+                           },
+                           ["ExplosiveDamageVehicle"] = {
+                               ["Value"] = -100,
+                           },
+                       },
+                   },
+                   Vector3.new(0,0,0)
+               }
+               remote:FireServer(unpack(args))
+           end
+       end
+
+       for _,player in pairs(Players:GetPlayers()) do
+           if player.Name == targetPlayerName then
+               killPlayer(player)
+           end
+       end
+   end
+end)
+
+Online:AddButton('Half Heal Target', function() 
+   if selectedPlayer then
+       local targetPlayerName = selectedPlayer
+
+       local Players = game:GetService("Players")
+       local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+       local client = Players.LocalPlayer
+       local remote = ReplicatedStorage.WeaponFrameworkRep.Events.Damage
+
+       local function killPlayer(player)
+           local character = player.Character
+           if character then
+               local instance = character:GetChildren()[1]
+               local args = {
+                   19742,
+                   {instance},
+                   {
+                       ["DamageHumanoid"] = {
+                           ["Value"] = -50,
+                       },
+                       ["DamageVehicle"] = {
+                           ["Value"] = -50,
+                       },
+                       ["Explosive"] = {
+                           ["ExplosiveDamageHumanoid"] = {
+                               ["Value"] = -50,
+                           },
+                           ["ExplosiveDamageVehicle"] = {
+                               ["Value"] = -50,
+                           },
+                       },
+                   },
+                   Vector3.new(0,0,0)
+               }
+               remote:FireServer(unpack(args))
+           end
+       end
+
+       for _,player in pairs(Players:GetPlayers()) do
+           if player.Name == targetPlayerName then
+               killPlayer(player)
+           end
+       end
+   end
+end)
+
+
+local Weapons = Tabs.Weapons:AddLeftGroupbox('Nice Weapon Options | Tuning')
+
+
+Weapons:AddButton('Add Suppressor [1st In Backpack]', function() 
+   local tool = game:GetService("Players").LocalPlayer.Backpack:GetChildren()[1]
+       if tool then
+           tool["ACS_Modulo"].Variaveis.Suppressor.Value=true
+       end
+end)
+
+Weapons:AddButton('Tune Weapon [1st In Backpack]', function() 
+   local tool = game:GetService("Players").LocalPlayer.Backpack:GetChildren()[1]
+       if tool then
+           tool["ACS_Modulo"].Variaveis.Ammo.Value = math.huge
+           tool["ACS_Modulo"].Variaveis.StoredAmmo.MaxValue = math.huge
+           tool["ACS_Modulo"].Variaveis.StoredAmmo.Value = math.huge
+       end
+end)
+
+Weapons:AddButton('Hard Tune Weapon [1st In Backpack]', function() 
+   local _player = game:GetService("Players").LocalPlayer
+   local _gun = _player.Backpack:GetChildren()[1] -- Get the first tool in the backpack
+   if _gun then -- Check if there is a tool in the backpack
+       local _script = _gun.ACS_Modulo.Variaveis:FindFirstChild("Settings")
+       local _module = require(_script)
+   
+       local function rapidFire()
+           _module["Mode"] = "Auto"
+       end 
+   
+       local function oneShot()
+           _module["LimbsDamage"] = { 900, 900 } 
+           _module["TorsoDamage"] = { 900, 900 }
+           _module["HeadDamage"] = { 900, 900 }
+       end
+   
+       local function noSpread()
+           _module["MinSpread"] = 0
+           _module["axSpread"] = 0
+       end
+   
+       local function noRecoil()
+           _module["SwayBase"] = 0
+           _module["VRecoil"] = { 0, 0 }
+           _module["HRecoil"] = { 0, 0 }
+           _module["AimRecoilReduction"] = 50
+           _module["MinRecoilPower"] = 0
+           _module["MaxRecoilPower"] = 0
+           _module["RecoilPowerStepAmount"] = 0
+           _module["RecoilPunch"] = 0
+           _module["AimInaccuracyStepAmount"] = 0
+           print("done")
+       end
+   
+       noRecoil()
+       noSpread()
+       oneShot()
+       rapidFire()
+   end
+end)
+
+Weapons:AddButton('Remove Recoil [Lagging]', function() 
+   loadstring(game:HttpGet(('https://raw.githubusercontent.com/CriminalMM/nr/main/nr'),true))()
+end)
+
+
+
+
+
+local AimAndVis = Tabs.AimAndVis:AddLeftGroupbox('Aiming | WORKING')
+
+AimAndVis:AddToggle('aimbot', {
+   Text = 'Aimbot',
+   Default = false,
+   Tooltip = 'Toggles Aimbot On/Off',
+   Callback = function(bool)
+       local Camera = workspace.CurrentCamera
+       local Players = game:GetService("Players")
+       local RunService = game:GetService("RunService")
+       local UserInputService = game:GetService("UserInputService")
+       local TweenService = game:GetService("TweenService")
+       local LocalPlayer = Players.LocalPlayer
+       local Holding = false
+       
+       _G.AimbotEnabled = (bool)
+       _G.TeamCheck = false -- If set to true then the script would only lock your aim at enemy team members.
+       _G.AimPart = "Head" -- Where the aimbot script would lock at.
+       _G.Sensitivity = 0 -- How many seconds it takes for the aimbot script to officially lock onto the target's aimpart.
+       
+       _G.CircleSides = 64 -- How many sides the FOV circle would have.
+       _G.CircleColor = Color3.fromRGB(255, 255, 255) -- (RGB) Color that the FOV circle would appear as.
+       _G.CircleTransparency = 0.7 -- Transparency of the circle.
+       _G.CircleRadius = 80 -- The radius of the circle / FOV.
+       _G.CircleFilled = false -- Determines whether or not the circle is filled.
+       _G.CircleVisible = false -- Determines whether or not the circle is visible.
+       _G.CircleThickness = 0 -- The thickness of the circle.
+       
+       local FOVCircle = Drawing.new("Circle")
+       FOVCircle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+       FOVCircle.Radius = _G.CircleRadius
+       FOVCircle.Filled = _G.CircleFilled
+       FOVCircle.Color = _G.CircleColor
+       FOVCircle.Visible = _G.CircleVisible
+       FOVCircle.Radius = _G.CircleRadius
+       FOVCircle.Transparency = _G.CircleTransparency
+       FOVCircle.NumSides = _G.CircleSides
+       FOVCircle.Thickness = _G.CircleThickness
+       
+       local function GetClosestPlayer()
+           local MaximumDistance = _G.CircleRadius
+           local Target = nil
+       
+           for _, v in next, Players:GetPlayers() do
+               if v.Name ~= LocalPlayer.Name then
+                   if _G.TeamCheck == true then
+                       if v.Team ~= LocalPlayer.Team then
+                           if v.Character ~= nil then
+                               if v.Character:FindFirstChild("HumanoidRootPart") ~= nil then
+                                   if v.Character:FindFirstChild("Humanoid") ~= nil and v.Character:FindFirstChild("Humanoid").Health ~= 0 then
+                                       local ScreenPoint = Camera:WorldToScreenPoint(v.Character:WaitForChild("HumanoidRootPart", math.huge).Position)
+                                       local VectorDistance = (Vector2.new(UserInputService:GetMouseLocation().X, UserInputService:GetMouseLocation().Y) - Vector2.new(ScreenPoint.X, ScreenPoint.Y)).Magnitude
+                                       
+                                       if VectorDistance < MaximumDistance then
+                                           Target = v
+                                       end
+                                   end
+                               end
+                           end
+                       end
+                   else
+                       if v.Character ~= nil then
+                           if v.Character:FindFirstChild("HumanoidRootPart") ~= nil then
+                               if v.Character:FindFirstChild("Humanoid") ~= nil and v.Character:FindFirstChild("Humanoid").Health ~= 0 then
+                                   local ScreenPoint = Camera:WorldToScreenPoint(v.Character:WaitForChild("HumanoidRootPart", math.huge).Position)
+                                   local VectorDistance = (Vector2.new(UserInputService:GetMouseLocation().X, UserInputService:GetMouseLocation().Y) - Vector2.new(ScreenPoint.X, ScreenPoint.Y)).Magnitude
+                                   
+                                   if VectorDistance < MaximumDistance then
+                                       Target = v
+                                   end
+                               end
+                           end
+                       end
+                   end
+               end
+           end
+       
+           return Target
+       end
+       
+       UserInputService.InputBegan:Connect(function(Input)
+           if Input.UserInputType == Enum.UserInputType.MouseButton2 then
+               Holding = true
+           end
+       end)
+       
+       UserInputService.InputEnded:Connect(function(Input)
+           if Input.UserInputType == Enum.UserInputType.MouseButton2 then
+               Holding = false
+           end
+       end)
+       
+       RunService.RenderStepped:Connect(function()
+           FOVCircle.Position = Vector2.new(UserInputService:GetMouseLocation().X, UserInputService:GetMouseLocation().Y)
+           FOVCircle.Radius = _G.CircleRadius
+           FOVCircle.Filled = _G.CircleFilled
+           FOVCircle.Color = _G.CircleColor
+           FOVCircle.Visible = _G.CircleVisible
+           FOVCircle.Radius = _G.CircleRadius
+           FOVCircle.Transparency = _G.CircleTransparency
+           FOVCircle.NumSides = _G.CircleSides
+           FOVCircle.Thickness = _G.CircleThickness
+       
+           if Holding == true and _G.AimbotEnabled == true then
+               TweenService:Create(Camera, TweenInfo.new(_G.Sensitivity, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {CFrame = CFrame.new(Camera.CFrame.Position, GetClosestPlayer().Character[_G.AimPart].Position)}):Play()
+           end
+       end) 
+   end
+})
+
+
+AimAndVis:AddDropdown('aimbone', {
+   Values = { 'Head', 'HumanoidRootPart', 'LeftLeg', 'RightLeg' },
+   Default = 1, -- number index of the value / string
+   Multi = false, -- true / false, allows multiple choices to be selected
+
+   Text = 'Aimbone',
+   Tooltip = 'Aimbone', -- Information shown when you hover over the dropdown
+
+   Callback = function(Value)
+       _G.AimPart = Value
+   end
+})
+
+
+AimAndVis:AddSlider('smoothness', {
+   Text = 'Smoothness',
+   Default = 0,
+   Min = 0,
+   Max = 5,
+   Rounding = 1,
+   Compact = false,
+
+   Callback = function(Value)
+       _G.Sensitivity = Value
+   end
+})
+
+AimAndVis:AddToggle('enablec', {
+   Text = 'Enable Circle',
+   Default = false,
+   Tooltip = 'Enable Circle',
+   Callback = function(Value)
+       _G.CircleVisible = Value 
+   end
+})
+
+
+AimAndVis:AddToggle('fillit', {
+   Text = 'Fill Circle',
+   Default = false,
+   Tooltip = 'Fill Circle',
+   Callback = function(Value)
+       _G.CircleFilled = Value 
+   end
+})
+
+
+AimAndVis:AddSlider('circlesize', {
+   Text = 'Circle Size',
+   Default = 50,
+   Min = 50,
+   Max = 300,
+   Rounding = 1,
+   Compact = false,
+
+   Callback = function(Value)
+       _G.CircleRadius = Value 
+   end
+})
+
+AimAndVis:AddToggle('teamcheck', {
+   Text = 'Team Check',
+   Default = false,
+   Tooltip = 'Team Check',
+   Callback = function(Value)
+       _G.TeamCheck = Value 
+   end
+})
+
+
+
+
+local AimAndVis = Tabs.AimAndVis:AddRightGroupbox('Visuals | NOT WORKING')
+
+-- render
+
+
+AimAndVis:AddToggle('enableesp', {
+   Text = 'Enable ESP',
+   Default = false,
+   Tooltip = 'Toggle ESP',
+   Callback = function(bool)
+      
+   end
+})
+
+AimAndVis:AddToggle('boxesp', {
+   Text = 'Box ESP',
+   Default = false,
+   Tooltip = 'Toggle ESP',
+   Callback = function(bool)
+      
+   end
+})
+
+AimAndVis:AddToggle('enableesp', {
+   Text = 'Tracer ESP',
+   Default = false,
+   Tooltip = 'Toggle ESP',
+   Callback = function(bool)
+      
+   end
+})
+
+AimAndVis:AddToggle('enableesp', {
+   Text = 'Info ESP',
+   Default = false,
+   Tooltip = 'Toggle ESP',
+   Callback = function(bool)
+      
+   end
+})
+
+AimAndVis:AddToggle('enableesp', {
+   Text = 'Health ESP',
+   Default = false,
+   Tooltip = 'Toggle ESP',
+   Callback = function(bool)
+     
+   end
+})
+
+AimAndVis:AddToggle('enableesp', {
+   Text = 'Held Tool ESP',
+   Default = false,
+   Tooltip = 'Toggle ESP',
+   Callback = function(bool)
+      
+   end
+})
+
+AimAndVis:AddLabel('Misc Visuals', true)
+
+local Lighting = game:GetService("Lighting")
+
+local fullbrightEnabled = false -- Keep track of whether fullbright is enabled or not
+local fullbrightStrength = 2 -- Default fullbright strength value
+local strengthLimitRemoved = false -- Keep track of whether strength limit has been removed or not
+
+AimAndVis:AddToggle('enableesp', {
+   Text = 'Fullbright',
+   Default = false,
+   Tooltip = 'Toggle Fullbright',
+   Callback = function(bool)
+       fullbrightEnabled = bool
+       if fullbrightEnabled then
+           Lighting.Ambient = Color3.fromRGB(255, 255, 255)
+           Lighting.Brightness = fullbrightStrength
+       else
+           Lighting.Ambient = Color3.fromRGB(127, 127, 127)
+           Lighting.Brightness = 1
+       end
+   end
+})
+
+AimAndVis:AddSlider('MySlider', {
+   Text = 'Fullbright Strength Slider',
+   Default = 1,
+   Min = 1,
+   Max = 20,
+   Rounding = 1,
+   Compact = false,
+
+   Callback = function(value) -- Fixed variable name
+       if strengthLimitRemoved then
+           fullbrightStrength = math.min(value, 250)
+       else
+           fullbrightStrength = math.clamp(value, 1, 20)
+       end
+       if fullbrightEnabled then
+           Lighting.Brightness = fullbrightStrength
+       end
+   end
+})
+
+
+
+
+
+local Teleports = Tabs.Teleports:AddLeftGroupbox('Teleportation | Default')
+
+Teleports:AddButton('TP > Plofkraak Materiaal', function()
+   game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(-1375.982421875, 3.6062774658203125, 516.2714233398438)
+
+end)
+
+Teleports:AddButton('TP > Blackmarket', function()
+   game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(182.95245361328125, 4.293564319610596, -4218.1484375)
+
+end)
+
+Teleports:AddLabel('Drugs TPs', true)
+
+Teleports:AddButton('TP > Wiet Zaden Kweek', function()
+   game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(-3899.783935546875, -24.571035385131836, -48.33098602294922)
+
+end)
+
+Teleports:AddButton('TP > Wiet Pluk', function()
+   game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(3256.6767578125, 2.9276444911956787, -2130.154541015625)
+
+end)
+
+Teleports:AddButton('TP > Planten Verkoop', function()
+   game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(-5295.3798828125, 3.58815598487854, -923.0138549804688)
+
+end)
+
+Teleports:AddButton('TP > Zakjes Wisselaar', function()
+   game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(-942.6383666992188, 3.5881354808807373, -744.1317749023438)
+
+end)
+
+Teleports:AddButton('TP > Poedersuiker Dealer', function()
+   game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(482.1757507324219, 3.584524393081665, 2055.9072265625)
+
+end)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+-- Library functions
+-- Sets the watermark visibility
+Library:SetWatermarkVisibility(true)
+
+-- Example of dynamically-updating watermark with common traits (fps and ping)
+local FrameTimer = tick()
+local FrameCounter = 0;
+local FPS = 60;
+
+local WatermarkConnection = game:GetService('RunService').RenderStepped:Connect(function()
+   FrameCounter += 1;
+
+   if (tick() - FrameTimer) >= 1 then
+       FPS = FrameCounter;
+       FrameTimer = tick();
+       FrameCounter = 0;
+   end;
+
+   Library:SetWatermark(('Fr0zenL4ke.ez Reborn | Version: Build_Unstable  | %s fps | %s ms'):format(
+       math.floor(FPS),
+       math.floor(game:GetService('Stats').Network.ServerStatsItem['Data Ping']:GetValue())
+   ));
+end);
+
+Library.KeybindFrame.Visible = false; -- todo: add a function for this
+
+Library:OnUnload(function()
+   WatermarkConnection:Disconnect()
+
+   print('Unloaded!')
+   Library.Unloaded = true
+end)
+
+-- UI Settings
+local MenuGroup = Tabs['UI Settings']:AddLeftGroupbox('Menu')
+
+-- I set NoUI so it does not show up in the keybinds menu
+MenuGroup:AddButton('Unload', function() Library:Unload() end)
+MenuGroup:AddLabel('Menu bind'):AddKeyPicker('MenuKeybind', { Default = 'End', NoUI = true, Text = 'Menu keybind' })
+
+Library.ToggleKeybind = Options.MenuKeybind -- Allows you to have a custom keybind for the menu
+
+ThemeManager:SetLibrary(Library)
+SaveManager:SetLibrary(Library)
+SaveManager:IgnoreThemeSettings()
+SaveManager:SetIgnoreIndexes({ 'MenuKeybind' })
+ThemeManager:SetFolder('FRC')
+SaveManager:SetFolder('FRC/FRData')
+SaveManager:BuildConfigSection(Tabs['UI Settings'])
+ThemeManager:ApplyToTab(Tabs['UI Settings'])
+SaveManager:LoadAutoloadConfig()
